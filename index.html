@@ -403,7 +403,7 @@ const JOGOS_BASE = [
   {id:52, t1:'🇳🇴 Noruega',         t2:'🇸🇳 Senegal',          dh:'2026-06-22T21:00',g:'I',loc:'Nova York/NJ'},
   {id:53, t1:'🇳🇴 Noruega',         t2:'🇫🇷 França',           dh:'2026-06-26T16:00',g:'I',loc:'Boston'},
   {id:54, t1:'🇸🇳 Senegal',         t2:'🇮🇶 Iraque',            dh:'2026-06-26T16:00',g:'I',loc:'Toronto'},
-  {id:55, t1:'🇦🇷 Argentina',       t2:'🇩🇿 Argélia',          dh:'2026-06-16T14:00',g:'J',loc:'Kansas City'},
+  {id:55, t1:'🇦🇷 Argentina',       t2:'🇩🇿 Argélia',          dh:'2026-06-16T22:00',g:'J',loc:'Kansas City'},
   {id:56, t1:'🇦🇹 Áustria',         t2:'🇯🇴 Jordânia',         dh:'2026-06-17T01:00',g:'J',loc:'San Francisco'},
   {id:57, t1:'🇦🇷 Argentina',       t2:'🇦🇹 Áustria',          dh:'2026-06-22T14:00',g:'J',loc:'Dallas'},
   {id:58, t1:'🇯🇴 Jordânia',        t2:'🇩🇿 Argélia',          dh:'2026-06-23T00:00',g:'J',loc:'San Francisco'},
@@ -439,14 +439,14 @@ const JOGOS_BASE = [
   {id:87, t1:'',t2:'',dh:'2026-07-03T19:00',g:'16avos',loc:'',slot:'1J × 2H'},
   {id:88, t1:'',t2:'',dh:'2026-07-03T22:30',g:'16avos',loc:'',slot:'1K × 3°'},
   // OITAVAS
-  {id:89, t1:'',t2:'',dh:'2026-07-04T14:00',g:'Oitavas',loc:'',slot:'Venc. J73 × Venc. J75'},
-  {id:90, t1:'',t2:'',dh:'2026-07-04T18:00',g:'Oitavas',loc:'',slot:'Venc. J74 × Venc. J77'},
-  {id:91, t1:'',t2:'',dh:'2026-07-05T17:00',g:'Oitavas',loc:'',slot:'Venc. J76 × Venc. J78'},
-  {id:92, t1:'',t2:'',dh:'2026-07-05T21:00',g:'Oitavas',loc:'',slot:'Venc. J79 × Venc. J80'},
-  {id:93, t1:'',t2:'',dh:'2026-07-06T16:00',g:'Oitavas',loc:'',slot:'Venc. J83 × Venc. J84'},
-  {id:94, t1:'',t2:'',dh:'2026-07-06T21:00',g:'Oitavas',loc:'',slot:'Venc. J81 × Venc. J82'},
-  {id:95, t1:'',t2:'',dh:'2026-07-07T13:00',g:'Oitavas',loc:'',slot:'Venc. J86 × Venc. J88'},
-  {id:96, t1:'',t2:'',dh:'2026-07-07T17:00',g:'Oitavas',loc:'',slot:'Venc. J85 × Venc. J87'},
+  {id:89, t1:'',t2:'',dh:'2026-07-04T14:00',g:'Oitavas',loc:'Houston',slot:'Canadá × Marrocos'},
+  {id:90, t1:'',t2:'',dh:'2026-07-04T18:00',g:'Oitavas',loc:'',slot:'Paraguai × França'},
+  {id:91, t1:'',t2:'',dh:'2026-07-05T17:00',g:'Oitavas',loc:'',slot:'Brasil × Noruega'},
+  {id:92, t1:'',t2:'',dh:'2026-07-05T21:00',g:'Oitavas',loc:'Azteca',slot:'México × Inglaterra'},
+  {id:93, t1:'',t2:'',dh:'2026-07-06T16:00',g:'Oitavas',loc:'',slot:'Espanha × Venc. Port/Cro'},
+  {id:94, t1:'',t2:'',dh:'2026-07-06T21:00',g:'Oitavas',loc:'',slot:'EUA × Bélgica'},
+  {id:95, t1:'',t2:'',dh:'2026-07-07T13:00',g:'Oitavas',loc:'',slot:'Venc. Suíça/Argélia × Venc. Port/Cro'},
+  {id:96, t1:'',t2:'',dh:'2026-07-07T17:00',g:'Oitavas',loc:'',slot:'Venc. Arg/Cabo × Venc. Col/Gana'},
   // QUARTAS
   {id:97, t1:'',t2:'',dh:'2026-07-09T17:00',g:'Quartas',loc:'',slot:'Venc. J89 × Venc. J90'},
   {id:98, t1:'',t2:'',dh:'2026-07-09T21:00',g:'Quartas',loc:'',slot:'Venc. J91 × Venc. J92'},
@@ -586,7 +586,22 @@ function totalPts(email){
 // ════════════════════════════════════════════════
 function minAte(id){const j=JOGOS_BASE.find(x=>x.id===id);if(!j)return-1;return(new Date(j.dh)-new Date())/60000}
 function travado(id){const r=R[id];if(r?.status==='IN_PLAY'||r?.status==='FINISHED'||r?.status==='PAUSED')return true;return minAte(id)<=MINUTOS_TRAVA}
-function encerrado(id){return R[id]?.status==='FINISHED'||R[id]?.status==='AWARDED'}
+function encerrado(id){
+  const r = R[id];
+  if(!r) return false;
+  // Status explícito de encerrado
+  if(r.status==='FINISHED'||r.status==='AWARDED') return true;
+  // Fallback: se já tem placar definido E o jogo começou há mais de 2h30, considera encerrado
+  // (proteção contra status da API desatualizado/inconsistente)
+  if(r.g1!=null && r.g2!=null){
+    const j = JOGOS_BASE.find(x=>x.id==id);
+    if(j){
+      const minDesdeInicio = (new Date() - new Date(j.dh)) / 60000;
+      if(minDesdeInicio > 150) return true; // mais de 2h30 desde o início
+    }
+  }
+  return false;
+}
 function aoVivo(id){return R[id]?.status==='IN_PLAY'||R[id]?.status==='PAUSED'||R[id]?.status==='EXTRA_TIME'||R[id]?.status==='PENALTY_SHOOTOUT'}
 function fmtDH(dh){
   const d=new Date(dh);
@@ -855,7 +870,7 @@ function sair(){EU=null;document.getElementById('tela-app').classList.remove('on
 function abrirApp(){
   document.getElementById('tela-auth').classList.remove('on');
   document.getElementById('tela-app').classList.add('on');
-  atualizarStats();renderFsel();autoPreencherMata();renderJogos();ir('jogos');
+  injetarResultadosFixos();corrigirTimesMata();autoPreencherMata();atualizarStats();renderFsel();renderJogos();ir('jogos');
   iniciarAutoSync();
   // Sincroniza dados compartilhados a cada 30 segundos
   setInterval(async()=>{ await carregarDadosSB(); if(EU)renderRanking(); },30000);
@@ -1044,6 +1059,132 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 // ════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════
+// RESULTADOS FIXOS — fase de grupos + 16-avos encerrados
+// Não dependem da API — injetados manualmente
+// ═══════════════════════════════════════════════
+function injetarResultadosFixos(){
+  const fixos = {
+    // GRUPO A
+    1:{g1:2,g2:0},2:{g1:2,g2:1},3:{g1:1,g2:1},4:{g1:1,g2:0},5:{g1:0,g2:3},6:{g1:1,g2:0},
+    // GRUPO B
+    7:{g1:1,g2:1},8:{g1:1,g2:1},9:{g1:4,g2:1},10:{g1:6,g2:0},11:{g1:2,g2:1},12:{g1:3,g2:1},
+    // GRUPO C
+    13:{g1:1,g2:1},14:{g1:0,g2:1},15:{g1:0,g2:1},16:{g1:3,g2:0},17:{g1:0,g2:3},18:{g1:4,g2:2},
+    // GRUPO D
+    19:{g1:4,g2:1},20:{g1:2,g2:0},21:{g1:0,g2:1},22:{g1:2,g2:0},23:{g1:3,g2:2},24:{g1:0,g2:0},
+    // GRUPO E
+    25:{g1:7,g2:1},26:{g1:1,g2:0},27:{g1:2,g2:1},28:{g1:0,g2:0},29:{g1:2,g2:1},30:{g1:0,g2:2},
+    // GRUPO F
+    31:{g1:2,g2:2},32:{g1:5,g2:1},33:{g1:5,g2:1},34:{g1:0,g2:4},35:{g1:1,g2:1},36:{g1:1,g2:3},
+    // GRUPO G
+    37:{g1:1,g2:1},38:{g1:2,g2:2},39:{g1:0,g2:0},40:{g1:1,g2:3},41:{g1:1,g2:5},42:{g1:1,g2:1},
+    // GRUPO H
+    43:{g1:0,g2:0},44:{g1:1,g2:1},45:{g1:4,g2:0},46:{g1:2,g2:2},47:{g1:0,g2:0},48:{g1:0,g2:1},
+    // GRUPO I
+    49:{g1:3,g2:1},50:{g1:1,g2:4},51:{g1:3,g2:0},52:{g1:3,g2:2},53:{g1:1,g2:4},54:{g1:5,g2:0},
+    // GRUPO J
+    55:{g1:3,g2:0},56:{g1:3,g2:1},57:{g1:2,g2:0},58:{g1:1,g2:2},59:{g1:1,g2:3},60:{g1:3,g2:3},
+    // GRUPO K
+    61:{g1:1,g2:1},62:{g1:1,g2:3},63:{g1:5,g2:0},64:{g1:1,g2:0},65:{g1:0,g2:0},66:{g1:3,g2:1},
+    // GRUPO L
+    67:{g1:4,g2:2},68:{g1:1,g2:0},69:{g1:0,g2:0},70:{g1:0,g2:1},71:{g1:0,g2:2},72:{g1:2,g2:1},
+    // 16-AVOS
+    73:{g1:0,g2:1},  // África do Sul 0x1 Canadá
+    74:{g1:2,g2:1},  // Brasil 2x1 Japão
+    75:{g1:1,g2:1},  // Alemanha 1x1 Paraguai (Paraguai pênaltis)
+    76:{g1:1,g2:1},  // Holanda 1x1 Marrocos (Marrocos pênaltis)
+    77:{g1:1,g2:2},  // Costa do Marfim 1x2 Noruega
+    78:{g1:3,g2:0},  // França 3x0 Suécia
+    79:{g1:2,g2:0},  // México 2x0 Equador
+    80:{g1:3,g2:0},  // Espanha 3x0 Áustria
+    81:{g1:2,g2:1},  // Inglaterra 2x1 Congo
+    82:{g1:3,g2:2},  // Bélgica 3x2 Senegal
+    83:{g1:2,g2:0},  // EUA 2x0 Bósnia
+  };
+
+  // Pênaltis — registrar vencedor para mata-mata
+  const penaltis = {
+    75: 'Paraguai',  // Paraguai passou
+    76: 'Marrocos',  // Marrocos passou
+  };
+
+  Object.entries(fixos).forEach(([id,res])=>{
+    const jId = parseInt(id);
+    if(!R[jId]) R[jId] = {};
+    // Só sobrescreve se não tiver resultado melhor da API
+    R[jId].g1 = res.g1;
+    R[jId].g2 = res.g2;
+    R[jId].status = 'FINISHED';
+    R[jId].fixo = true;
+  });
+
+  // Registrar vencedores de pênaltis no mata-mata
+  Object.entries(penaltis).forEach(([id,venc])=>{
+    const jId = parseInt(id);
+    if(!TM[jId]) TM[jId] = {};
+    TM[jId].venc = venc;
+    // Definir perdedor
+    const jogo = JOGOS_BASE.find(j=>j.id===jId);
+    if(jogo){
+      TM[jId].perd = venc === jogo.t1 ? jogo.t2 : jogo.t1;
+    }
+  });
+
+  sv('r', R);
+  sv('tm', TM);
+}
+
+// ═══════════════════════════════════════════════
+// TIMES FIXOS DO MATA-MATA — baseado no chaveamento real
+// ═══════════════════════════════════════════════
+function corrigirTimesMata(){
+  const timesFixos = {
+    73: {t1:'🇿🇦 África do Sul', t2:'🇨🇦 Canadá',       venc:'🇨🇦 Canadá',       perd:'🇿🇦 África do Sul'},
+    74: {t1:'🇧🇷 Brasil',        t2:'🇯🇵 Japão',         venc:'🇧🇷 Brasil',        perd:'🇯🇵 Japão'},
+    75: {t1:'🇩🇪 Alemanha',      t2:'🇵🇾 Paraguai',      venc:'🇵🇾 Paraguai',      perd:'🇩🇪 Alemanha'},
+    76: {t1:'🇳🇱 Holanda',       t2:'🇲🇦 Marrocos',      venc:'🇲🇦 Marrocos',      perd:'🇳🇱 Holanda'},
+    77: {t1:'🇨🇮 Costa do Marfim',t2:'🇳🇴 Noruega',      venc:'🇳🇴 Noruega',       perd:'🇨🇮 Costa do Marfim'},
+    78: {t1:'🇫🇷 França',        t2:'🇸🇪 Suécia',        venc:'🇫🇷 França',        perd:'🇸🇪 Suécia'},
+    79: {t1:'🇲🇽 México',        t2:'🇪🇨 Equador',       venc:'🇲🇽 México',        perd:'🇪🇨 Equador'},
+    80: {t1:'🇪🇸 Espanha',       t2:'🇦🇹 Áustria',       venc:'🇪🇸 Espanha',       perd:'🇦🇹 Áustria'},
+    81: {t1:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra',  t2:'🇨🇩 Congo',         venc:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra',  perd:'🇨🇩 Congo'},
+    82: {t1:'🇧🇪 Bélgica',       t2:'🇸🇳 Senegal',       venc:'🇧🇪 Bélgica',       perd:'🇸🇳 Senegal'},
+    83: {t1:'🇺🇸 EUA',           t2:'🇧🇦 Bósnia',        venc:'🇺🇸 EUA',           perd:'🇧🇦 Bósnia'},
+    // ── OITAVAS JÁ CONFIRMADAS ──
+    // Oitavas 2: Canadá x Marrocos (04/07 14h)
+    89: {t1:'🇨🇦 Canadá',        t2:'🇲🇦 Marrocos'},
+    // Oitavas 1: Paraguai x França (04/07 18h)
+    90: {t1:'🇵🇾 Paraguai',      t2:'🇫🇷 França'},
+    // Oitavas 5: Brasil x Noruega (05/07 17h)
+    91: {t1:'🇧🇷 Brasil',        t2:'🇳🇴 Noruega'},
+    // Oitavas 6: México x Inglaterra (05/07 21h)
+    92: {t1:'🇲🇽 México',        t2:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra'},
+    // Oitavas 4: EUA x Bélgica (06/07 21h)
+    93: {t1:'🇺🇸 EUA',           t2:'🇧🇪 Bélgica'},
+    // Oitavas 3: Espanha x (Venc Portugal/Croácia) (06/07 16h)
+    94: {t1:'🇪🇸 Espanha',       t2:''},
+    // Oitavas 7: Venc Suíça/Argélia x Venc Portugal/Croácia (pendente)
+    95: {t1:'',                  t2:''},
+    // Oitavas 8: Venc Argentina/Cabo Verde x Venc Colômbia/Gana (pendente)
+    96: {t1:'',                  t2:''},
+  };
+
+  Object.entries(timesFixos).forEach(([id, times])=>{
+    const jId = parseInt(id);
+    if(!TM[jId]) TM[jId] = {};
+    Object.assign(TM[jId], times);
+    // Propagar para JOGOS_BASE
+    const jogo = JOGOS_BASE.find(j=>j.id===jId);
+    if(jogo){
+      if(times.t1) jogo.t1 = times.t1;
+      if(times.t2) jogo.t2 = times.t2;
+    }
+  });
+  sv('tm', TM);
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
   // Garante que jogos apareçam independente da API
   setTimeout(()=>{
